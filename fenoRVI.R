@@ -2,6 +2,7 @@ library(raster)
 library(rgdal)
 library(ggplot2)
 library(GGally)
+library(sp)
 setwd("~/owncloud/7-aplicaciones")
 #camino <- "imagenes/indices/20171116T141930-indices.tif"
 
@@ -9,22 +10,33 @@ setwd("~/owncloud/7-aplicaciones")
 #files <- list.files(path = camino, pattern = '.tif$', full.names = TRUE)
 #indices <- stack(files)
 # Abro la imagen cosmo
-indices <- stack("campoCONAE/imagenes/indices/20171116T141930-indices.tif")
+indices <- stack("campoCONAE/imagenes/indices/20171116T141930-indices_reprojected.tif")
 names(indices) <- c("arvi", "dvi", "gemi", "gndvi", "ipvi", "ireci", "mcari", "msavi2", "msavi", "mtci", "ndi45", "pssra", "pvi", "reip", "rvi", "s2rep", "savi", "tndvi", "tsavi", "wdvi", "NDVI")
 
 
-plot(values(indices$arvi), values(indices$gemi))
-cor(values(indices$arvi), values(indices$gemi))
-indices <- crop(indices, extent(cosmo))
+#plot(values(indices$arvi), values(indices$gemi))
+#cor(values(indices$arvi), values(indices$gemi))
+
 
 # Apilo todo
 
-
 # Cargo el vector para hacer el muestreo
-#poligonoextraccion <- readOGR(dsn="monte-buey", layer="testindicies")
+poligonoextraccion<- readOGR(dsn="campoCONAE", layer="puntos-buffer-maiz")
+poligonoextraccionmaiz <- extract(indices, poligonoextraccion, fun=mean, df=TRUE)
+
+maiz <- readOGR(dsn="campoCONAE", layer="maiz2016")
+
+extraccionpol <- over(poligonoextraccion, maiz, df=TRUE)
+names(extraccionpol) <- c("var1", "var2", "var3")
+extraccionpol$ID <- seq.int(nrow(extraccionpol))
+pepe <- merge(extraccionpol, poligonoextraccionmaiz)
+
+write.csv(extraccionpol, "campoCONAE/extraccionpol.csv")
+write.csv(poligonoextraccionmaiz, "campoCONAE/poligonoextraccionmaiz.csv")
+
 
 # Extraigo los datos, el promedio y el desvio
-datos <- extract(apilado, poligonoextraccion, df=TRUE)
+datos <- extract(indices, extraccionpol, df=TRUE)
 datos <- datos[-1]
 datos <- datos[-4]
 names(datos) <- c("lai", "mndwi", "ndwi2", "ndwi",  "rvi")
